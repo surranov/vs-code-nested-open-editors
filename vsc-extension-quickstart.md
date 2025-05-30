@@ -1,23 +1,23 @@
-# Nested Open Editors - Руководство для разработчиков
+# Nested Open Editors - Developer Guide
 
-## Структура проекта
+## Project Structure
 
-* `package.json` - Манифест расширения
-* `src/extension.ts` - Основной код активации расширения
-* `src/nestedOpenEditorsProvider.ts` - Провайдер данных для дерева открытых редакторов
+* `package.json` - Extension manifest
+* `src/extension.ts` - Main extension activation code
+* `src/nestedOpenEditorsProvider.ts` - Data provider for open editors tree
 
-## Запуск и отладка
+## Running and Debugging
 
-* Нажмите `F5` чтобы открыть новое окно с вашим расширением загруженным.
-* Установите точки останова в вашем коде для отладки.
-* Найдите вывод из вашего расширения в панели `Консоль отладки`.
+* Press `F5` to open a new window with your extension loaded.
+* Set breakpoints in your code for debugging.
+* Find output from your extension in the `Debug Console`.
 
-## Внесение изменений
+## Making Changes
 
-* Все изменения автоматически перекомпилируются и применяются к запущенному окну отладки.
-* Когда вы вносите изменения в код и сохраняете файлы, расширение будет автоматически перезагружаться.
+* All changes are automatically recompiled and applied to the running debug window.
+* When you make changes to code and save files, the extension will automatically reload.
 
-## Упаковка расширения
+## Packaging Extension
 
-* Для создания пакета расширения (.vsix) выполните: `vsce package`
-* Затем можно установить его через: `code --install-extension nested-open-editors-0.0.1.vsix` 
+* To create extension package (.vsix) run: `vsce package`
+* Then install it via: `code --install-extension nested-open-editors-1.0.9.vsix`

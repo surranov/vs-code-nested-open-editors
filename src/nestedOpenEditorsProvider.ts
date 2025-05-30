@@ -41,7 +41,7 @@ export class TreeItem extends vscode.TreeItem {
       arguments: [this.resourceUri]
     };
     
-    // Проверяем является ли файл временным
+    // Check if file is a preview
     const isPreview = vscode.window.tabGroups.all
       .flatMap(group => group.tabs)
       .find(tab => 
@@ -54,7 +54,7 @@ export class TreeItem extends vscode.TreeItem {
       this.description = 'Preview';
     }
     
-    // Стандартная иконка для файла
+    // Standard file icon
     this.iconPath = new vscode.ThemeIcon('file');
   }
 
@@ -79,69 +79,69 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
   private _allItemsFlat: TreeItem[] = [];
   
   /**
-   * Получает все открытые редакторы в виде дерева
+   * Gets all open editors as a tree
    */
   private getOpenEditors(): TreeItem[] {
-    // Корень дерева
+    // Tree root
     const rootItems: TreeItem[] = [];
     
-    // Кэш папок по их полному пути для быстрого поиска
+    // Cache of folders by their full path for quick lookup
     const folderCache = new Map<string, TreeItem>();
     
-    // Получаем все открытые файлы из всех групп табов
+    // Get all open files from all tab groups
     const allTabs = vscode.window.tabGroups.all.flatMap(group => group.tabs);
     
-    // Создает или получает папку в дереве, создавая все родительские папки при необходимости
+    // Creates or gets folder in tree, creating all parent folders as needed
     const getOrCreateFolderHierarchy = (folderPath: string): TreeItem => {
-      // Проверяем, есть ли уже папка в кэше
+      // Check if folder already exists in cache
       const existingFolder = folderCache.get(folderPath);
       if (existingFolder) {
         return existingFolder;
       }
       
-      // Получаем workspace папки
+      // Get workspace folders
       const workspaceFolders = vscode.workspace.workspaceFolders || [];
       
-      // Проверяем, находится ли папка внутри workspace
+      // Check if folder is inside workspace
       const workspaceFolder = workspaceFolders.find(wsFolder => 
         folderPath.startsWith(wsFolder.uri.fsPath)
       );
       
-      // Если папка не в workspace, не создаем для неё элемент дерева
+      // If folder is not in workspace, don't create tree element for it
       if (!workspaceFolder) {
-        // Создаем элемент но не добавляем в дерево
+        // Create element but don't add to tree
         const folder = new TreeItem(vscode.Uri.file(folderPath), ItemType.Folder);
         folderCache.set(folderPath, folder);
         return folder;
       }
       
-      // Создаем новую папку
+      // Create new folder
       const folder = new TreeItem(vscode.Uri.file(folderPath), ItemType.Folder);
       folderCache.set(folderPath, folder);
       
-      // Определяем родительский путь
+      // Determine parent path
       const parentPath = path.dirname(folderPath);
       
-      // Если папка является workspace папкой или её родитель равен workspace, добавляем к корню
+      // If folder is workspace folder or its parent equals workspace, add to root
       if (folderPath === workspaceFolder.uri.fsPath || parentPath === workspaceFolder.uri.fsPath) {
         rootItems.push(folder);
         return folder;
       }
       
-      // Если нет родительского пути (корень файловой системы), добавляем к корню дерева
+      // If no parent path (filesystem root), add to tree root
       if (parentPath === folderPath) {
         rootItems.push(folder);
         return folder;
       }
       
-      // Рекурсивно создаем родительскую папку и добавляем текущую как дочернюю
+      // Recursively create parent folder and add current as child
       const parentFolder = getOrCreateFolderHierarchy(parentPath);
       parentFolder.children.push(folder);
       
       return folder;
     };
     
-    // Обработка каждого открытого файла
+    // Process each open file
     for (const tab of allTabs) {
       if (!(tab.input instanceof vscode.TabInputText)) {
         continue;
@@ -155,47 +155,47 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
       const filePath = uri.fsPath;
       const dirPath = path.dirname(filePath);
       
-      // Получаем workspace папки
+      // Get workspace folders
       const workspaceFolders = vscode.workspace.workspaceFolders || [];
       
-      // Проверяем, находится ли файл в workspace
+      // Check if file is in workspace
       const workspaceFolder = workspaceFolders.find(wsFolder => 
         filePath.startsWith(wsFolder.uri.fsPath)
       );
       
-      // Если файл не в workspace, пропускаем его
+      // If file is not in workspace, skip it
       if (!workspaceFolder) {
         continue;
       }
       
-      // Если файл находится в корне workspace, добавляем его напрямую в корень дерева
+      // If file is in workspace root, add it directly to tree root
       if (dirPath === workspaceFolder.uri.fsPath) {
         const fileItem = new TreeItem(uri, ItemType.File);
         rootItems.push(fileItem);
         continue;
       }
       
-      // Получаем или создаем иерархию папок для этого файла
+      // Get or create folder hierarchy for this file
       const folderItem = getOrCreateFolderHierarchy(dirPath);
       
-      // Добавляем файл в папку
+      // Add file to folder
       const fileItem = new TreeItem(uri, ItemType.File);
       folderItem.children.push(fileItem);
     }
     
-    // Сортируем все папки и файлы
+    // Sort all folders and files
     const sortTreeItems = (items: TreeItem[]): void => {
-      // Сортируем элементы на текущем уровне
+      // Sort elements at current level
       items.sort((a, b) => {
-        // Сначала папки, потом файлы
+        // Folders first, then files
         if (a.type !== b.type) {
           return a.type === ItemType.Folder ? -1 : 1;
         }
-        // В рамках одного типа - по алфавиту
+        // Within same type - alphabetically
         return a.resourceUri.fsPath.localeCompare(b.resourceUri.fsPath);
       });
       
-      // Рекурсивно сортируем дочерние элементы
+      // Recursively sort child elements
       for (const item of items) {
         if (item.children.length > 0) {
           sortTreeItems(item.children);
@@ -203,10 +203,10 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
       }
     };
     
-    // Сортируем дерево
+    // Sort tree
     sortTreeItems(rootItems);
     
-    // Сохраняем результат в кэше
+    // Save result in cache
     this._cachedItems = rootItems;
     this._updateFlatItemsList();
     
@@ -214,12 +214,12 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
   }
   
   /**
-   * Обновляет плоский список всех элементов для быстрого поиска
+   * Updates flat list of all elements for quick search
    */
   private _updateFlatItemsList(): void {
     this._allItemsFlat = [];
     
-    // Функция для рекурсивного добавления элементов в плоский список
+    // Function to recursively add elements to flat list
     const addItemsRecursively = (items: TreeItem[]) => {
       for (const item of items) {
         this._allItemsFlat.push(item);
@@ -231,14 +231,14 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
   }
 
   /**
-   * Получает дерево элементов
+   * Gets tree item
    */
   getTreeItem(element: TreeItem): vscode.TreeItem {
     return element;
   }
 
   /**
-   * Получает дочерние элементы
+   * Gets child elements
    */
   getChildren(element?: TreeItem): TreeItem[] {
     if (!element) {
@@ -248,12 +248,12 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
   }
 
   /**
-   * Получает родительский элемент
+   * Gets parent element
    */
   getParent(element: TreeItem): vscode.ProviderResult<TreeItem> {
     if (element.type === ItemType.File) {
       const parentPath = path.dirname(element.resourceUri.fsPath);
-      // Ищем родителя в плоском списке по пути
+      // Find parent in flat list by path
       const parent = this._allItemsFlat.find(item => 
         item.type === ItemType.Folder && 
         item.resourceUri.fsPath === parentPath
@@ -263,12 +263,12 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
       const elementPath = element.resourceUri.fsPath;
       const parentPath = path.dirname(elementPath);
       
-      // Если путь родителя не отличается от пути элемента - это корень
+      // If parent path doesn't differ from element path - this is root
       if (parentPath === elementPath) {
         return null;
       }
       
-      // Ищем родителя в плоском списке
+      // Find parent in flat list
       const parent = this._allItemsFlat.find(item => 
         item.type === ItemType.Folder && 
         item.resourceUri.fsPath === parentPath
@@ -279,17 +279,17 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
   }
 
   /**
-   * Возвращает плоский список всех элементов дерева
+   * Returns flat list of all tree elements
    */
   getAllItems(): TreeItem[] {
     if (this._allItemsFlat.length === 0) {
-      this.getOpenEditors(); // Это обновит кэши
+      this.getOpenEditors(); // This will update caches
     }
     return this._allItemsFlat;
   }
   
   /**
-   * Находит элемент дерева по URI
+   * Finds tree element by URI
    */
   findItemByUri(uri: vscode.Uri): TreeItem | undefined {
     const allItems = this.getAllItems();
@@ -299,7 +299,7 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
   }
 
   /**
-   * Обновляет дерево
+   * Updates tree
    */
   refresh(): void {
     this._cachedItems = [];

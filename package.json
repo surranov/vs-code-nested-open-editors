@@ -2,7 +2,7 @@
   "name": "nested-open-editors",
   "displayName": "Nested Open Editors",
   "description": "Display open editors as a file tree",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "engines": {
     "vscode": "^1.86.0"
   },

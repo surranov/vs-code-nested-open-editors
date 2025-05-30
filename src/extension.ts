@@ -14,36 +14,36 @@ export function activate(context: vscode.ExtensionContext) {
     showCollapseAll: false
   });
   
-  // Отслеживаем активные таймеры для отмены если новое событие произошло до выполнения предыдущего
+  // Track active timeouts to cancel if new event occurs before previous one completes
   let revealTimeout: NodeJS.Timeout | undefined;
   
-  // Флаг для отслеживания видимости нашего представления
+  // Flag to track visibility of our view
   let isViewVisible = false;
   
-  // Отслеживаем видимость нашего TreeView
+  // Track visibility of our TreeView
   context.subscriptions.push(
     treeView.onDidChangeVisibility(e => {
       isViewVisible = e.visible;
       console.log(`TreeView visibility changed: ${isViewVisible}`);
       
-      // Если представление стало видимым, обновляем выделение
+      // If view becomes visible, update selection
       if (isViewVisible) {
         revealActiveEditor();
       }
     })
   );
   
-  // Функция для выделения активного редактора в дереве
+  // Function to reveal active editor in tree
   const revealActiveEditor = () => {
-    // Отменяем предыдущий таймер если он был
+    // Cancel previous timer if it exists
     if (revealTimeout) {
       clearTimeout(revealTimeout);
       revealTimeout = undefined;
     }
     
-    // Проверяем, видно ли наше представление
+    // Check if our view is visible
     if (!isViewVisible) {
-      return; // Если панель не видна, не делаем выделение
+      return; // If panel is not visible, don't highlight
     }
     
     const activeEditor = vscode.window.activeTextEditor;
@@ -51,24 +51,24 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
     
-    // Получаем URI активного файла
+    // Get URI of active file
     const activeUri = activeEditor.document.uri;
     
-    // Обновляем дерево
+    // Update tree
     nestedOpenEditorsProvider.refresh();
     
-    // Устанавливаем таймер для выделения файла после обновления дерева
+    // Set timer to highlight file after tree update
     revealTimeout = setTimeout(() => {
-      // Проверяем еще раз видимость (могла измениться за время таймера)
+      // Check visibility again (might have changed during timer)
       if (!isViewVisible) {
         revealTimeout = undefined;
         return;
       }
       
-      // Ищем элемент, соответствующий активному файлу
+      // Find item corresponding to active file
       const activeItem = nestedOpenEditorsProvider.findItemByUri(activeUri);
       
-      // Если нашли элемент, выделяем его в дереве
+      // If item found, highlight it in tree
       if (activeItem) {
         console.log(`Revealing item: ${activeItem.resourceUri.fsPath}`);
         treeView.reveal(activeItem, { select: true, focus: false, expand: true });
@@ -77,7 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
     }, 100);
   };
   
-  // Определяем начальную видимость (асинхронно)
+  // Determine initial visibility (asynchronously)
   setTimeout(() => {
     isViewVisible = treeView.visible;
     console.log(`Initial TreeView visibility: ${isViewVisible}`);
