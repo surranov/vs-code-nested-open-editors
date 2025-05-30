@@ -2,7 +2,7 @@
   "name": "nested-open-editors",
   "displayName": "Nested Open Editors",
   "description": "Display open editors as a file tree",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "engines": {
     "vscode": "^1.86.0"
   },
@@ -66,7 +66,8 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "package": "npx vsce package --out dist/"
   },
   "devDependencies": {
     "@types/vscode": "^1.86.0",
@@ -92,7 +93,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/surranov/nested-open-editors.git"
+    "url": "https://github.com/surranov/vs-code-nested-open-editors"
+  },
+  "homepage": "https://github.com/surranov/vs-code-nested-open-editors",
+  "bugs": {
+    "url": "https://github.com/surranov/vs-code-nested-open-editors"
   },
   "publisher": "surranov"
 }
