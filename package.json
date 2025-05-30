@@ -1,0 +1,98 @@
+{
+  "name": "nested-open-editors",
+  "displayName": "Nested Open Editors",
+  "description": "Display open editors as a file tree",
+  "version": "1.0.7",
+  "engines": {
+    "vscode": "^1.86.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "nestedOpenEditors",
+          "name": "Nested Open Editors",
+          "icon": "$(files)"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "nestedOpenEditors.closeEditor",
+        "title": "Close",
+        "icon": "$(close)"
+      },
+      {
+        "command": "nestedOpenEditors.closeAllEditors",
+        "title": "Close All",
+        "icon": "$(close-all)"
+      },
+      {
+        "command": "nestedOpenEditors.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "nestedOpenEditors.closeAllEditors",
+          "when": "view == nestedOpenEditors",
+          "group": "navigation"
+        },
+        {
+          "command": "nestedOpenEditors.refresh",
+          "when": "view == nestedOpenEditors",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "nestedOpenEditors.closeEditor",
+          "when": "view == nestedOpenEditors && viewItem == nestedOpenEditorsFile",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.86.0",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "20.2.5",
+    "@typescript-eslint/eslint-plugin": "^5.59.8",
+    "@typescript-eslint/parser": "^5.59.8",
+    "eslint": "^8.41.0",
+    "glob": "^8.1.0",
+    "mocha": "^10.2.0",
+    "typescript": "^5.1.3",
+    "@vscode/test-electron": "^2.3.2"
+  },
+  "keywords": [
+    "open editors",
+    "folders",
+    "files",
+    "explorer",
+    "tree view"
+  ],
+  "author": "surranov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/surranov/nested-open-editors.git"
+  },
+  "publisher": "surranov"
+}
