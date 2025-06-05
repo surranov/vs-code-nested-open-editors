@@ -72,8 +72,10 @@ export function activate(context: vscode.ExtensionContext) {
       
       // If item found, highlight it in tree
       if (activeItem) {
-        console.log(`Revealing item: ${activeItem.resourceUri.fsPath}`);
+        console.log(`Revealing item: ${activeItem.resourceUri.fsPath} with ID: ${activeItem.id}`);
         treeView.reveal(activeItem, { select: true, focus: false, expand: true });
+      } else {
+        console.log(`No item found for URI: ${activeUri.toString()}`);
       }
       revealTimeout = undefined;
     }, 100);

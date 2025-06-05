@@ -24,6 +24,10 @@ export class TreeItem extends vscode.TreeItem {
     // Устанавливаем resourceUri для поддержки стандартных команд VS Code
     this.resourceUri = resourceUri;
     
+    // Устанавливаем уникальный ID на основе полного пути + типа
+    // Это поможет VS Code различать элементы с одинаковыми именами
+    this.id = `${this.type}:${resourceUri.toString()}`;
+    
     if (type === ItemType.File) {
       this.setupFileItem();
     } else {
@@ -470,9 +474,25 @@ export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeIt
    */
   findItemByUri(uri: vscode.Uri): TreeItem | undefined {
     const allItems = this.getAllItems();
-    return allItems.find(item => 
-      item.resourceUri.toString() === uri.toString()
+    const targetUriString = uri.toString();
+    
+    // Ищем точное совпадение по полному URI
+    const exactMatch = allItems.find(item => 
+      item.resourceUri.toString() === targetUriString
     );
+    
+    if (exactMatch) {
+      console.log(`Found exact match for ${targetUriString}: ${exactMatch.resourceUri.toString()}`);
+      return exactMatch;
+    }
+    
+    // Если точное совпадение не найдено, логируем для отладки
+    console.log(`No exact match found for ${targetUriString}. Available items:`);
+    allItems.forEach(item => {
+      console.log(`  - ${item.resourceUri.toString()}`);
+    });
+    
+    return undefined;
   }
 
   /**

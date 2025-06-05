@@ -2,7 +2,7 @@
   "name": "nested-open-editors",
   "displayName": "Nested Open Editors",
   "description": "Display open editors as a file tree with drag and drop support",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "engines": {
     "vscode": "^1.86.0"
   },
