@@ -1,5 +1,31 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { NestedOpenEditorsProvider, ItemType, TreeItem } from './nestedOpenEditorsProvider';
+
+/**
+ * Рекурсивно копирует папку со всем содержимым
+ */
+async function copyDirectoryRecursively(sourceUri: vscode.Uri, targetUri: vscode.Uri): Promise<void> {
+  // Создаем целевую папку
+  await vscode.workspace.fs.createDirectory(targetUri);
+  
+  // Читаем содержимое исходной папки
+  const entries = await vscode.workspace.fs.readDirectory(sourceUri);
+  
+  // Копируем каждый элемент
+  for (const [name, type] of entries) {
+    const sourceItemUri = vscode.Uri.joinPath(sourceUri, name);
+    const targetItemUri = vscode.Uri.joinPath(targetUri, name);
+    
+    if (type === vscode.FileType.File) {
+      // Копируем файл
+      await vscode.workspace.fs.copy(sourceItemUri, targetItemUri);
+    } else if (type === vscode.FileType.Directory) {
+      // Рекурсивно копируем подпапку
+      await copyDirectoryRecursively(sourceItemUri, targetItemUri);
+    }
+  }
+}
 
 /**
  * Activates the extension
@@ -382,13 +408,79 @@ export function activate(context: vscode.ExtensionContext) {
           const newFolderUri = vscode.Uri.joinPath(treeItem.resourceUri, folderName);
           await vscode.workspace.fs.createDirectory(newFolderUri);
           vscode.window.showInformationMessage(`Создана папка: ${folderName}`);
-          revealActiveEditor(); // Обновляем дерево
-        } catch (error) {
-          vscode.window.showErrorMessage(`Ошибка создания папки: ${error}`);
-        }
-      }
-    })
-  ];
+                   revealActiveEditor(); // Обновляем дерево
+       } catch (error) {
+         vscode.window.showErrorMessage(`Ошибка создания папки: ${error}`);
+       }
+     }
+   }),
+
+   vscode.commands.registerCommand('nestedOpenEditors.duplicate', async (treeItem: TreeItem) => {
+     try {
+       const sourceUri = treeItem.resourceUri;
+       const sourcePath = sourceUri.fsPath;
+       const parentPath = path.dirname(sourcePath);
+       const baseName = path.basename(sourcePath);
+       
+       let duplicateName: string;
+       let duplicateUri: vscode.Uri;
+       let counter = 1;
+       
+       if (treeItem.type === ItemType.File) {
+         // Для файлов: разделяем имя и расширение
+         const extension = path.extname(baseName);
+         const nameWithoutExtension = path.basename(baseName, extension);
+         
+         // Генерируем уникальное имя
+         do {
+           duplicateName = counter === 1 
+             ? `${nameWithoutExtension} (copy)${extension}`
+             : `${nameWithoutExtension} (copy ${counter})${extension}`;
+           duplicateUri = vscode.Uri.file(path.join(parentPath, duplicateName));
+           
+           try {
+             await vscode.workspace.fs.stat(duplicateUri);
+             counter++; // Файл существует, увеличиваем счетчик
+           } catch {
+             break; // Файл не существует, можно использовать это имя
+           }
+         } while (counter < 100); // Защита от бесконечного цикла
+         
+         // Копируем файл
+         await vscode.workspace.fs.copy(sourceUri, duplicateUri);
+         vscode.window.showInformationMessage(`Файл продублирован: ${duplicateName}`);
+         
+         // Открываем дублированный файл
+         await vscode.commands.executeCommand('vscode.open', duplicateUri);
+         
+       } else if (treeItem.type === ItemType.Folder) {
+         // Для папок
+         do {
+           duplicateName = counter === 1 
+             ? `${baseName} (copy)`
+             : `${baseName} (copy ${counter})`;
+           duplicateUri = vscode.Uri.file(path.join(parentPath, duplicateName));
+           
+           try {
+             await vscode.workspace.fs.stat(duplicateUri);
+             counter++; // Папка существует, увеличиваем счетчик
+           } catch {
+             break; // Папка не существует, можно использовать это имя
+           }
+         } while (counter < 100); // Защита от бесконечного цикла
+         
+         // Копируем папку со всем содержимым
+         await copyDirectoryRecursively(sourceUri, duplicateUri);
+         vscode.window.showInformationMessage(`Папка продублирована: ${duplicateName}`);
+       }
+       
+       revealActiveEditor(); // Обновляем дерево
+       
+     } catch (error) {
+       vscode.window.showErrorMessage(`Ошибка дублирования: ${error}`);
+     }
+   })
+ ];
 
   // Add all subscriptions to context
   context.subscriptions.push(...subscriptions, ...additionalCommands, treeView);

@@ -2,7 +2,7 @@
   "name": "nested-open-editors",
   "displayName": "Nested Open Editors",
   "description": "Display open editors as a file tree with drag and drop support",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "engines": {
     "vscode": "^1.86.0"
   },
@@ -100,6 +100,10 @@
       {
         "command": "nestedOpenEditors.newFolder",
         "title": "New Folder"
+      },
+      {
+        "command": "nestedOpenEditors.duplicate",
+        "title": "Duplicate"
       }
     ],
     "menus": {
@@ -185,6 +189,11 @@
           "command": "nestedOpenEditors.newFolder",
           "when": "view == nestedOpenEditors && viewItem == folder",
           "group": "6_creation@2"
+        },
+        {
+          "command": "nestedOpenEditors.duplicate",
+          "when": "view == nestedOpenEditors && (viewItem == file || viewItem == folder)",
+          "group": "6_creation@3"
         },
         {
           "command": "nestedOpenEditors.rename",
