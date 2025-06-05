@@ -11,7 +11,9 @@ export function activate(context: vscode.ExtensionContext) {
   // Register the provider for tree view
   const treeView = vscode.window.createTreeView('nestedOpenEditors', {
     treeDataProvider: nestedOpenEditorsProvider,
-    showCollapseAll: false
+    showCollapseAll: false,
+    canSelectMany: true,
+    dragAndDropController: nestedOpenEditorsProvider
   });
   
   // Track active timeouts to cancel if new event occurs before previous one completes
@@ -160,13 +162,234 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('nestedOpenEditors.refresh', () => {
       revealActiveEditor();
     }),
-    
-    // Tree view
-    treeView
+
+    // Контекстное меню команды
+    vscode.commands.registerCommand('nestedOpenEditors.copyPath', (treeItem: TreeItem) => {
+      vscode.env.clipboard.writeText(treeItem.resourceUri.fsPath);
+      vscode.window.showInformationMessage(`Путь скопирован: ${treeItem.resourceUri.fsPath}`);
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.copyRelativePath', (treeItem: TreeItem) => {
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(treeItem.resourceUri);
+      if (workspaceFolder) {
+        const relativePath = vscode.workspace.asRelativePath(treeItem.resourceUri, false);
+        vscode.env.clipboard.writeText(relativePath);
+        vscode.window.showInformationMessage(`Относительный путь скопирован: ${relativePath}`);
+      } else {
+        vscode.env.clipboard.writeText(treeItem.resourceUri.fsPath);
+        vscode.window.showInformationMessage(`Путь скопирован: ${treeItem.resourceUri.fsPath}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.revealInOS', (treeItem: TreeItem) => {
+      vscode.commands.executeCommand('revealFileInOS', treeItem.resourceUri);
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.openFile', (treeItem: TreeItem) => {
+      vscode.commands.executeCommand('vscode.open', treeItem.resourceUri);
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.openToSide', (treeItem: TreeItem) => {
+      vscode.commands.executeCommand('vscode.open', treeItem.resourceUri, { viewColumn: vscode.ViewColumn.Beside });
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.openWith', (treeItem: TreeItem) => {
+      vscode.commands.executeCommand('vscode.openWith', treeItem.resourceUri);
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.openInTerminal', (treeItem: TreeItem) => {
+      if (treeItem.type === ItemType.Folder) {
+        vscode.commands.executeCommand('openInTerminal', treeItem.resourceUri);
+      }
+    })
   ];
-  
+
+  // Переменная для сравнения файлов
+  let selectedForCompare: vscode.Uri | undefined = undefined;
+
+  // Переменные для операций cut/copy/paste
+  let clipboardItem: { uri: vscode.Uri; operation: 'cut' | 'copy' } | undefined = undefined;
+
+  // Дополнительные команды для контекстного меню
+  const additionalCommands = [
+    vscode.commands.registerCommand('nestedOpenEditors.selectForCompare', (treeItem: TreeItem) => {
+      selectedForCompare = treeItem.resourceUri;
+      vscode.window.showInformationMessage(`Выбрано для сравнения: ${treeItem.label}`);
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.compareWithSelected', (treeItem: TreeItem) => {
+      if (selectedForCompare) {
+        vscode.commands.executeCommand('vscode.diff', selectedForCompare, treeItem.resourceUri, `${selectedForCompare.fsPath} ↔ ${treeItem.resourceUri.fsPath}`);
+        selectedForCompare = undefined;
+      } else {
+        vscode.window.showWarningMessage('Сначала выберите файл для сравнения');
+      }
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.cut', (treeItem: TreeItem) => {
+      clipboardItem = { uri: treeItem.resourceUri, operation: 'cut' };
+      vscode.env.clipboard.writeText(treeItem.resourceUri.fsPath);
+      vscode.window.showInformationMessage(`Вырезано: ${treeItem.label}`);
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.copy', (treeItem: TreeItem) => {
+      clipboardItem = { uri: treeItem.resourceUri, operation: 'copy' };
+      vscode.env.clipboard.writeText(treeItem.resourceUri.fsPath);
+      vscode.window.showInformationMessage(`Скопировано: ${treeItem.label}`);
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.rename', async (treeItem: TreeItem) => {
+      const currentName = treeItem.label as string;
+      const newName = await vscode.window.showInputBox({
+        prompt: 'Введите новое имя',
+        value: currentName,
+        validateInput: (value) => {
+          if (!value || value.trim().length === 0) {
+            return 'Имя не может быть пустым';
+          }
+          if (value.includes('/') || value.includes('\\')) {
+            return 'Имя не может содержать слеши';
+          }
+          return undefined;
+        }
+      });
+
+      if (newName && newName !== currentName) {
+        const oldUri = treeItem.resourceUri;
+        const newUri = vscode.Uri.joinPath(oldUri, '..', newName);
+        
+        try {
+          await vscode.workspace.fs.rename(oldUri, newUri);
+          vscode.window.showInformationMessage(`Переименовано: ${currentName} → ${newName}`);
+          revealActiveEditor(); // Обновляем дерево
+        } catch (error) {
+          vscode.window.showErrorMessage(`Ошибка переименования: ${error}`);
+        }
+      }
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.delete', async (treeItem: TreeItem) => {
+      const fileName = treeItem.label as string;
+      const confirmation = await vscode.window.showWarningMessage(
+        `Вы действительно хотите удалить "${fileName}"?`,
+        { modal: true },
+        'Удалить'
+      );
+
+      if (confirmation === 'Удалить') {
+        try {
+          await vscode.workspace.fs.delete(treeItem.resourceUri, { recursive: true, useTrash: true });
+          vscode.window.showInformationMessage(`Удалено: ${fileName}`);
+          revealActiveEditor(); // Обновляем дерево
+        } catch (error) {
+          vscode.window.showErrorMessage(`Ошибка удаления: ${error}`);
+                 }
+       }
+     }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.paste', async (treeItem: TreeItem) => {
+      if (!clipboardItem) {
+        vscode.window.showWarningMessage('Нет элементов для вставки');
+        return;
+      }
+
+      if (treeItem.type !== ItemType.Folder) {
+        vscode.window.showWarningMessage('Можно вставлять только в папки');
+        return;
+      }
+
+      const sourceUri = clipboardItem.uri;
+      const targetFolderUri = treeItem.resourceUri;
+      const fileName = sourceUri.fsPath.split('/').pop() || 'unknown';
+      const targetUri = vscode.Uri.joinPath(targetFolderUri, fileName);
+
+      try {
+        if (clipboardItem.operation === 'cut') {
+          // Перемещение файла
+          await vscode.workspace.fs.rename(sourceUri, targetUri);
+          vscode.window.showInformationMessage(`Перемещено: ${fileName}`);
+          clipboardItem = undefined; // Очищаем clipboard после cut
+        } else {
+          // Копирование файла
+          await vscode.workspace.fs.copy(sourceUri, targetUri);
+          vscode.window.showInformationMessage(`Скопировано: ${fileName}`);
+        }
+        revealActiveEditor(); // Обновляем дерево
+      } catch (error) {
+        vscode.window.showErrorMessage(`Ошибка при вставке: ${error}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.newFile', async (treeItem: TreeItem) => {
+      if (treeItem.type !== ItemType.Folder) {
+        vscode.window.showWarningMessage('Можно создавать файлы только в папках');
+        return;
+      }
+
+      const fileName = await vscode.window.showInputBox({
+        prompt: 'Введите имя нового файла',
+        value: 'newfile.txt',
+        validateInput: (value) => {
+          if (!value || value.trim().length === 0) {
+            return 'Имя файла не может быть пустым';
+          }
+          if (value.includes('/') || value.includes('\\')) {
+            return 'Имя файла не может содержать слеши';
+          }
+          return undefined;
+        }
+      });
+
+      if (fileName) {
+        try {
+          const newFileUri = vscode.Uri.joinPath(treeItem.resourceUri, fileName);
+          await vscode.workspace.fs.writeFile(newFileUri, new Uint8Array(0)); // Создаем пустой файл
+          vscode.window.showInformationMessage(`Создан файл: ${fileName}`);
+          
+          // Открываем новый файл в редакторе
+          await vscode.commands.executeCommand('vscode.open', newFileUri);
+          revealActiveEditor(); // Обновляем дерево
+        } catch (error) {
+          vscode.window.showErrorMessage(`Ошибка создания файла: ${error}`);
+        }
+      }
+    }),
+
+    vscode.commands.registerCommand('nestedOpenEditors.newFolder', async (treeItem: TreeItem) => {
+      if (treeItem.type !== ItemType.Folder) {
+        vscode.window.showWarningMessage('Можно создавать папки только в папках');
+        return;
+      }
+
+      const folderName = await vscode.window.showInputBox({
+        prompt: 'Введите имя новой папки',
+        value: 'новая папка',
+        validateInput: (value) => {
+          if (!value || value.trim().length === 0) {
+            return 'Имя папки не может быть пустым';
+          }
+          if (value.includes('/') || value.includes('\\')) {
+            return 'Имя папки не может содержать слеши';
+          }
+          return undefined;
+        }
+      });
+
+      if (folderName) {
+        try {
+          const newFolderUri = vscode.Uri.joinPath(treeItem.resourceUri, folderName);
+          await vscode.workspace.fs.createDirectory(newFolderUri);
+          vscode.window.showInformationMessage(`Создана папка: ${folderName}`);
+          revealActiveEditor(); // Обновляем дерево
+        } catch (error) {
+          vscode.window.showErrorMessage(`Ошибка создания папки: ${error}`);
+        }
+      }
+    })
+  ];
+
   // Add all subscriptions to context
-  context.subscriptions.push(...subscriptions);
+  context.subscriptions.push(...subscriptions, ...additionalCommands, treeView);
 }
 
 /**

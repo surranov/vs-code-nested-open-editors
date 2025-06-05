@@ -1,8 +1,8 @@
 {
   "name": "nested-open-editors",
   "displayName": "Nested Open Editors",
-  "description": "Display open editors as a file tree",
-  "version": "1.1.0",
+  "description": "Display open editors as a file tree with drag and drop support",
+  "version": "1.4.0",
   "engines": {
     "vscode": "^1.86.0"
   },
@@ -36,6 +36,70 @@
         "command": "nestedOpenEditors.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "nestedOpenEditors.copyPath",
+        "title": "Copy Path"
+      },
+      {
+        "command": "nestedOpenEditors.copyRelativePath", 
+        "title": "Copy Relative Path"
+      },
+      {
+        "command": "nestedOpenEditors.revealInOS",
+        "title": "Reveal in File Explorer"
+      },
+      {
+        "command": "nestedOpenEditors.openFile",
+        "title": "Open"
+      },
+      {
+        "command": "nestedOpenEditors.openToSide",
+        "title": "Open to the Side"
+      },
+      {
+        "command": "nestedOpenEditors.openWith",
+        "title": "Open With..."
+      },
+      {
+        "command": "nestedOpenEditors.openInTerminal",
+        "title": "Open in Integrated Terminal"
+      },
+      {
+        "command": "nestedOpenEditors.selectForCompare",
+        "title": "Select for Compare"
+      },
+      {
+        "command": "nestedOpenEditors.compareWithSelected",
+        "title": "Compare with Selected"
+      },
+      {
+        "command": "nestedOpenEditors.cut",
+        "title": "Cut"
+      },
+      {
+        "command": "nestedOpenEditors.copy",
+        "title": "Copy"
+      },
+      {
+        "command": "nestedOpenEditors.rename",
+        "title": "Rename..."
+      },
+      {
+        "command": "nestedOpenEditors.delete",
+        "title": "Delete"
+      },
+      {
+        "command": "nestedOpenEditors.paste",
+        "title": "Paste"
+      },
+      {
+        "command": "nestedOpenEditors.newFile",
+        "title": "New File"
+      },
+      {
+        "command": "nestedOpenEditors.newFolder",
+        "title": "New Folder"
       }
     ],
     "menus": {
@@ -53,8 +117,88 @@
       ],
       "view/item/context": [
         {
+          "command": "nestedOpenEditors.openFile",
+          "when": "view == nestedOpenEditors && viewItem == file",
+          "group": "navigation@1"
+        },
+        {
+          "command": "nestedOpenEditors.openToSide",
+          "when": "view == nestedOpenEditors && viewItem == file",
+          "group": "navigation@2"
+        },
+        {
+          "command": "nestedOpenEditors.openWith",
+          "when": "view == nestedOpenEditors && viewItem == file",
+          "group": "navigation@3"
+        },
+        {
+          "command": "nestedOpenEditors.revealInOS",
+          "when": "view == nestedOpenEditors && (viewItem == file || viewItem == folder)",
+          "group": "2_workspace@1"
+        },
+        {
+          "command": "nestedOpenEditors.openInTerminal",
+          "when": "view == nestedOpenEditors && viewItem == folder",
+          "group": "2_workspace@2"
+        },
+        {
+          "command": "nestedOpenEditors.selectForCompare",
+          "when": "view == nestedOpenEditors && viewItem == file",
+          "group": "3_compare@1"
+        },
+        {
+          "command": "nestedOpenEditors.compareWithSelected",
+          "when": "view == nestedOpenEditors && viewItem == file",
+          "group": "3_compare@2"
+        },
+        {
+          "command": "nestedOpenEditors.cut",
+          "when": "view == nestedOpenEditors && (viewItem == file || viewItem == folder)",
+          "group": "5_cutcopypaste@1"
+        },
+        {
+          "command": "nestedOpenEditors.copy",
+          "when": "view == nestedOpenEditors && (viewItem == file || viewItem == folder)",
+          "group": "5_cutcopypaste@2"
+        },
+        {
+          "command": "nestedOpenEditors.paste",
+          "when": "view == nestedOpenEditors && viewItem == folder",
+          "group": "5_cutcopypaste@3"
+        },
+        {
+          "command": "nestedOpenEditors.copyPath",
+          "when": "view == nestedOpenEditors && (viewItem == file || viewItem == folder)",
+          "group": "5_cutcopypaste@4"
+        },
+        {
+          "command": "nestedOpenEditors.copyRelativePath",
+          "when": "view == nestedOpenEditors && (viewItem == file || viewItem == folder)",
+          "group": "5_cutcopypaste@5"
+        },
+        {
+          "command": "nestedOpenEditors.newFile",
+          "when": "view == nestedOpenEditors && viewItem == folder",
+          "group": "6_creation@1"
+        },
+        {
+          "command": "nestedOpenEditors.newFolder",
+          "when": "view == nestedOpenEditors && viewItem == folder",
+          "group": "6_creation@2"
+        },
+        {
+          "command": "nestedOpenEditors.rename",
+          "when": "view == nestedOpenEditors && (viewItem == file || viewItem == folder)",
+          "group": "7_modification@1"
+        },
+        {
+          "command": "nestedOpenEditors.delete",
+          "when": "view == nestedOpenEditors && (viewItem == file || viewItem == folder)",
+          "group": "7_modification@2"
+        },
+        {
           "command": "nestedOpenEditors.closeEditor",
-          "when": "view == nestedOpenEditors && viewItem == nestedOpenEditorsFile",
+          "when": "view == nestedOpenEditors && viewItem == file",
           "group": "inline"
         }
       ]

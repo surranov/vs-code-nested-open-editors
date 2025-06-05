@@ -21,6 +21,8 @@ export class TreeItem extends vscode.TreeItem {
     super(resourceUri);
     
     this.label = path.basename(resourceUri.fsPath);
+    // Устанавливаем resourceUri для поддержки стандартных команд VS Code
+    this.resourceUri = resourceUri;
     
     if (type === ItemType.File) {
       this.setupFileItem();
@@ -33,7 +35,8 @@ export class TreeItem extends vscode.TreeItem {
    * Configures the tree item for a file
    */
   private setupFileItem(): void {
-    this.contextValue = 'nestedOpenEditorsFile';
+    // Используем стандартный contextValue для поддержки встроенных команд VS Code
+    this.contextValue = 'file';
     this.collapsibleState = vscode.TreeItemCollapsibleState.None;
     this.command = {
       command: 'vscode.open',
@@ -62,7 +65,8 @@ export class TreeItem extends vscode.TreeItem {
    * Configures the tree item for a folder
    */
   private setupFolderItem(): void {
-    this.contextValue = 'nestedOpenEditorsFolder';
+    // Используем стандартный contextValue для поддержки встроенных команд VS Code
+    this.contextValue = 'folder';
     this.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     this.iconPath = new vscode.ThemeIcon('folder');
   }
@@ -71,13 +75,186 @@ export class TreeItem extends vscode.TreeItem {
 /**
  * Main tree data provider for the nested open editors view
  */
-export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeItem> {
+export class NestedOpenEditorsProvider implements vscode.TreeDataProvider<TreeItem>, vscode.TreeDragAndDropController<TreeItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
   
   private _cachedItems: TreeItem[] = [];
   private _allItemsFlat: TreeItem[] = [];
-  
+
+  // Drag and Drop support
+  readonly dropMimeTypes = ['application/vnd.code.tree.nestedOpenEditors', 'text/uri-list'];
+  readonly dragMimeTypes = ['text/uri-list'];
+
+  /**
+   * Handles drag operation - определяет что можно перетаскивать
+   */
+  async handleDrag(source: TreeItem[], treeDataTransfer: vscode.DataTransfer, _token: vscode.CancellationToken): Promise<void> {
+    // Создаем данные для передачи при перетаскивании
+    const dragData = source.map(item => ({
+      uri: item.resourceUri.toString(),
+      type: item.type,
+      label: item.label
+    }));
+    
+    // Устанавливаем данные в transfer объект
+    treeDataTransfer.set('application/vnd.code.tree.nestedOpenEditors', new vscode.DataTransferItem(dragData));
+    
+    // Также добавляем URI для совместимости с другими компонентами VS Code
+    const uriList = source.map(item => item.resourceUri.toString()).join('\n');
+    treeDataTransfer.set('text/uri-list', new vscode.DataTransferItem(uriList));
+  }
+
+  /**
+   * Handles drop operation - обрабатывает сброс элементов
+   */
+  async handleDrop(target: TreeItem | undefined, sources: vscode.DataTransfer, _token: vscode.CancellationToken): Promise<void> {
+    // Сначала пытаемся получить данные из нашего внутреннего формата
+    let draggedItems: Array<{uri: string, type: string, label: string}> = [];
+    
+    const internalTransferItem = sources.get('application/vnd.code.tree.nestedOpenEditors');
+    if (internalTransferItem) {
+      draggedItems = internalTransferItem.value as Array<{uri: string, type: string, label: string}>;
+    } else {
+      // Если нет внутренних данных, пытаемся получить URI из внешних источников
+      const uriTransferItem = sources.get('text/uri-list');
+      if (uriTransferItem) {
+        const uriList = uriTransferItem.value as string;
+        const uris = uriList.split('\n').filter(uri => uri.trim().length > 0);
+        
+        // Преобразуем URI в наш формат
+        draggedItems = await Promise.all(uris.map(async (uriString) => {
+          const uri = vscode.Uri.parse(uriString);
+          try {
+            const stat = await vscode.workspace.fs.stat(uri);
+            const isDirectory = stat.type === vscode.FileType.Directory;
+            return {
+              uri: uriString,
+              type: isDirectory ? ItemType.Folder : ItemType.File,
+              label: path.basename(uri.fsPath)
+            };
+          } catch {
+            // Если не удалось получить статистику, считаем файлом
+            return {
+              uri: uriString,
+              type: ItemType.File,
+              label: path.basename(uri.fsPath)
+            };
+          }
+        }));
+      }
+    }
+
+    if (!draggedItems || draggedItems.length === 0) {
+      return;
+    }
+
+    // Определяем целевую папку
+    let targetFolder: TreeItem | undefined;
+    
+    if (!target) {
+      // Сброс в корень - не поддерживается для открытых файлов
+      vscode.window.showWarningMessage('Нельзя перемещать файлы в корень дерева открытых редакторов');
+      return;
+    }
+    
+    if (target.type === ItemType.Folder) {
+      targetFolder = target;
+    } else if (target.type === ItemType.File) {
+      // Если сбросили на файл, используем его родительскую папку
+      const parentPath = path.dirname(target.resourceUri.fsPath);
+      targetFolder = this._allItemsFlat.find(item => 
+        item.type === ItemType.Folder && 
+        item.resourceUri.fsPath === parentPath
+      );
+    }
+
+    if (!targetFolder) {
+      vscode.window.showErrorMessage('Не удалось определить целевую папку');
+      return;
+    }
+
+    // Обрабатываем каждый перетаскиваемый элемент
+    for (const draggedItem of draggedItems) {
+      const sourceUri = vscode.Uri.parse(draggedItem.uri);
+      
+      // Проверяем, что не пытаемся переместить папку в саму себя
+      if (draggedItem.type === ItemType.Folder && 
+          targetFolder.resourceUri.fsPath.startsWith(sourceUri.fsPath)) {
+        vscode.window.showWarningMessage(`Нельзя переместить папку "${draggedItem.label}" в саму себя`);
+        continue;
+      }
+
+      // Проверяем, открыт ли файл в редакторе
+      const isFileOpen = this.isFileOpenInEditor(sourceUri);
+      
+      if (isFileOpen) {
+        // Если файл открыт, выполняем перемещение в файловой системе
+        await this.moveFileToFolder(sourceUri, targetFolder.resourceUri);
+      } else {
+        // Если файл не открыт, предлагаем открыть его или переместить
+        const action = await vscode.window.showInformationMessage(
+          `Файл "${draggedItem.label}" не открыт в редакторе. Что вы хотите сделать?`,
+          'Открыть файл', 'Переместить файл', 'Отмена'
+        );
+        
+        if (action === 'Открыть файл') {
+          // Открываем файл в редакторе
+          await vscode.window.showTextDocument(sourceUri);
+        } else if (action === 'Переместить файл') {
+          // Перемещаем файл в файловой системе
+          await this.moveFileToFolder(sourceUri, targetFolder.resourceUri);
+        }
+        // Если выбрана "Отмена", ничего не делаем
+      }
+    }
+
+    // Обновляем дерево после перемещения
+    this.refresh();
+  }
+
+  /**
+   * Проверяет, открыт ли файл в редакторе
+   */
+  private isFileOpenInEditor(uri: vscode.Uri): boolean {
+    const allTabs = vscode.window.tabGroups.all.flatMap(group => group.tabs);
+    return allTabs.some(tab => 
+      tab.input instanceof vscode.TabInputText && 
+      tab.input.uri.toString() === uri.toString()
+    );
+  }
+
+  /**
+   * Перемещает файл в указанную папку
+   */
+  private async moveFileToFolder(sourceUri: vscode.Uri, targetFolderUri: vscode.Uri): Promise<void> {
+    try {
+      const fileName = path.basename(sourceUri.fsPath);
+      const targetUri = vscode.Uri.file(path.join(targetFolderUri.fsPath, fileName));
+      
+      // Проверяем, что целевой файл не существует
+      try {
+        await vscode.workspace.fs.stat(targetUri);
+        const overwrite = await vscode.window.showWarningMessage(
+          `Файл "${fileName}" уже существует в целевой папке. Перезаписать?`,
+          'Да', 'Нет'
+        );
+        if (overwrite !== 'Да') {
+          return;
+        }
+      } catch {
+        // Файл не существует, можно продолжать
+      }
+
+      // Выполняем перемещение
+      await vscode.workspace.fs.rename(sourceUri, targetUri, { overwrite: true });
+      
+      vscode.window.showInformationMessage(`Файл "${fileName}" успешно перемещен`);
+    } catch (error) {
+      vscode.window.showErrorMessage(`Ошибка при перемещении файла: ${error}`);
+    }
+  }
+
   /**
    * Gets all open editors as a tree
    */
