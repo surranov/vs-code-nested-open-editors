@@ -1,8 +1,8 @@
 {
   "name": "nested-open-editors",
-  "displayName": "Nested Open Editors",
-  "description": "Display open editors as a file tree with drag and drop support",
-  "version": "1.5.0",
+  "displayName": "Nested Open Editors (Deprecated)",
+  "description": "⚠️ DEPRECATED. Use \"Tab Tree\" (surranov.tab-tree) instead — a full rewrite with tab groups, multi-root workspaces, non-file tabs, git decorations, and 260+ tests. This extension is no longer maintained.",
+  "version": "1.5.1",
   "engines": {
     "vscode": "^1.86.0"
   },

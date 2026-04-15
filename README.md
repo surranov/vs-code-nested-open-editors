@@ -1,5 +1,16 @@
 # Nested Open Editors
 
+> ## ⚠️ This extension is deprecated
+>
+> **Use [Tab Tree](https://marketplace.visualstudio.com/items?itemName=surranov.tab-tree) instead** — a full rewrite by the same author with tab groups, multi-root workspaces, non-file tabs, git decorations, and 260+ tests.
+>
+> - Marketplace: https://marketplace.visualstudio.com/items?itemName=surranov.tab-tree
+> - GitHub: https://github.com/surranov/tab-tree
+>
+> This extension is no longer maintained. No bugs will be fixed, no features will be added.
+
+---
+
 A VS Code extension that displays open editors as a file tree, similar to the regular file explorer.
 
 ## Key Features
