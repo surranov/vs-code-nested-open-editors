@@ -1,15 +1,33 @@
-# Nested Open Editors
+# ⚠️ DEPRECATED — DO NOT INSTALL
 
-> ## ⚠️ This extension is deprecated
->
-> **Use [Tab Tree](https://marketplace.visualstudio.com/items?itemName=surranov.tab-tree) instead** — a full rewrite by the same author with tab groups, multi-root workspaces, non-file tabs, git decorations, and 260+ tests.
->
-> - Marketplace: https://marketplace.visualstudio.com/items?itemName=surranov.tab-tree
-> - GitHub: https://github.com/surranov/tab-tree
->
-> This extension is no longer maintained. No bugs will be fixed, no features will be added.
+# 👉 Install [**Tab Tree**](https://marketplace.visualstudio.com/items?itemName=surranov.tab-tree) instead
+
+**Nested Open Editors is no longer maintained.** A full rewrite by the same author is available:
+
+## [📦 Get Tab Tree on VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=surranov.tab-tree)
+
+Tab Tree is a complete rewrite with:
+
+- **Tab groups** — split editors render as separate sections
+- **Multi-root workspaces** — each root folder as its own tree
+- **Non-file tabs** — Settings, Keyboard Shortcuts, Welcome, Webviews
+- **Git decorations** — colors from the native git extension
+- **Pinned tab indicators** — visual marker for pinned tabs
+- **Preview mode toggle** — one click to enable/disable preview tabs
+- **Follow active file** — auto-reveal active editor in the tree
+- **260+ unit and integration tests**
+- **Cross-platform CI** — ubuntu, macos, windows
+
+### Links
+
+- 📦 **Marketplace:** [marketplace.visualstudio.com/items?itemName=surranov.tab-tree](https://marketplace.visualstudio.com/items?itemName=surranov.tab-tree)
+- 🐙 **GitHub:** [github.com/surranov/tab-tree](https://github.com/surranov/tab-tree)
+
+**No bugs will be fixed and no features will be added to Nested Open Editors.** Please migrate to Tab Tree.
 
 ---
+
+## Nested Open Editors (legacy)
 
 A VS Code extension that displays open editors as a file tree, similar to the regular file explorer.
 
@@ -35,4 +53,4 @@ A VS Code extension that displays open editors as a file tree, similar to the re
 
 - `Nested Open Editors: Close All Editors` - Close all open editors
 - `Nested Open Editors: Close Editor` - Close the selected editor
-- `Nested Open Editors: Refresh` - Manually refresh the tree view 
+- `Nested Open Editors: Refresh` - Manually refresh the tree view
